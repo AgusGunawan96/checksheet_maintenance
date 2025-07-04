@@ -71,18 +71,7 @@ foreach ($data as $row) {
 
         .modal-dialog-fullscreen {
             max-width: 95%;
-            /* margin: 1.75rem auto;
-            margin-left: 2rem !important; */
         }
-
-        /* @media (min-width: 576px) {
-
-            .modal-content {
-                max-width: 100%;
-                max-height: calc(100vh - 3.5rem);
-                border-radius: 0;
-            }
-        } */
     </style>
 </head>
 
@@ -161,9 +150,13 @@ foreach ($data as $row) {
                                     </div>
                                     <div class="col-md-2 col-3">
                                         <?php
-                                        if ($eq['step_proses'] == 4) {
+                                        // MODIFIKASI: Tampilkan tombol export untuk semua level yang sudah kirim checksheet
+                                        if ($eq['step_proses'] >= 3 || $this->session->userdata('level') == 1) {
                                         ?>
                                             <a href="<?= site_url('checksheet/export/' . $this->uri->segment(3)); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-success mb-2"><i class='bx bx-export'></i> Export Checksheet</a>
+                                            <a href="<?= site_url('checksheet/print_checksheet/' . $this->uri->segment(3)); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-info mb-2">
+            <i class='bx bx-printer'></i> Print Checksheet
+        </a>
                                         <?php } ?>
                                         <br>
                                         <?php
@@ -204,24 +197,49 @@ if ($this->session->userdata('level') != 1) {
                     <div class="card">
                         <div class="card-body" style="min-height: 500px;">
                             <div class="card-title">
-                                <h4>Daftar Part</h4>
-                                <?php
-                                // if ($level == '1' || $level == '2') {
-                                    if ($level == '1') {
-                                ?>
-                                    <button class="btn btn-info" data-toggle="modal" data-target="#part_add">Tambah Part</button>
-                                    <button class="btn btn-info" data-toggle="modal" data-target="#inspection_part_add">Tambah Inspection Part</button>
-                                    <button class="btn btn-info" data-toggle="modal" data-target="#item_add">Tambah Item</button>
+    <h4>Daftar Part</h4>
+    <?php if ($level == '1') : ?>
+        <!-- Existing buttons... -->
+        <button class="btn btn-info" data-toggle="modal" data-target="#part_add">Tambah Part</button>
+        <button class="btn btn-info" data-toggle="modal" data-target="#inspection_part_add">Tambah Inspection Part</button>
+        <button class="btn btn-info" data-toggle="modal" data-target="#item_add">Tambah Item</button>
+        <button class="btn btn-success" data-toggle="modal" data-target="#excel_import">Import dari CSV</button>
+        <a href="<?= site_url('checksheet/download_template_csv'); ?>" class="btn btn-outline-success">Download Template CSV</a>
+        
+        <!-- New marking management buttons -->
+        <div class="btn-group ml-2" role="group">
+            <button type="button" class="btn btn-warning" onclick="showMarkingInfo()">
+                <i class="bx bx-info-circle"></i> Marking Info
+            </button>
+            <button type="button" class="btn btn-outline-warning" onclick="clearAllMarkedRows()">
+                <i class="bx bx-trash"></i> Clear All Marks
+            </button>
+        </div>
+    <?php endif; ?>
+</div>
 
-                                    <button class="btn btn-success" data-toggle="modal" data-target="#excel_import">Import dari CSV</button>
-    <a href="<?= site_url('checksheet/download_template_csv'); ?>" class="btn btn-outline-success">Download Template CSV</a>
-
-                                <?php } ?>
-                            </div>
-
-                            <!-- Tambahkan tombol untuk import Excel -->
-
-
+<!-- Modal untuk Marking Info -->
+<div class="modal fade" id="markingInfoModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Marking Information</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="markingInfoContent">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" onclick="clearAllMarkedRowsFromModal()">Clear All Marks</button>
+            </div>
+        </div>
+    </div>
+</div>
 
                             <?= $this->session->flashdata('message'); ?>
                             <hr />
@@ -251,9 +269,6 @@ if ($this->session->userdata('level') != 1) {
                                                         <img src="<?= $eq['img_checksheet1']; ?>" alt="image" class="img-thumbnail">
                                                     </div>
                                                     <div class="row">
-                                                        <!-- <div class="col">
-                                                            <input type="file" name="img_checksheet1" id="img_checksheet1" class="form-control form-control-sm">
-                                                        </div> -->
                                                         <div class="col">
                                                              <!-- Menambahkan atribut accept dan capture untuk membuka kamera di perangkat yang mendukung -->
                                                             <input type="file" name="img_checksheet1" id="img_checksheet1" class="form-control form-control-sm" accept="image/*" capture="camera">
@@ -308,9 +323,6 @@ if ($this->session->userdata('level') != 1) {
                                             </form>
                                         </div>
                                     </div>
-
-                                    <!-- show image -->
-
                                 </div>
                                 <div class="col-md-4">
                                     <form action="<?= site_url('checksheet/update_checksheet/additional'); ?>" method="post">
@@ -332,11 +344,12 @@ if ($this->session->userdata('level') != 1) {
                                     </form>
                                 </div>
                             </div>
-                            <!-- create form input image with upload button -->
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <!-- Modal Add Part -->
             <div class="modal" tabindex="-1" id="part_add">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -368,6 +381,8 @@ if ($this->session->userdata('level') != 1) {
                     </div>
                 </div>
             </div>
+            
+            <!-- Modal Add Inspection Part -->
             <div class="modal" tabindex="-1" id="inspection_part_add">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -400,7 +415,6 @@ if ($this->session->userdata('level') != 1) {
                                             </select>
                                         </div>
                                         <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
-
                                     </div>
                                 </div>
                                 <input type="hidden" name="eq_id" value="<?= $this->uri->segment(3); ?>">
@@ -414,6 +428,8 @@ if ($this->session->userdata('level') != 1) {
                     </div>
                 </div>
             </div>
+            
+            <!-- Modal Add Item -->
             <div class="modal" tabindex="-1" id="item_add">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -444,7 +460,6 @@ if ($this->session->userdata('level') != 1) {
                                         </div>
                                         <div class="form-group">
                                             <label for="item">Item</label>
-
                                             <select name="item" id="item" class="form-control select2">
                                                 <option value="-" selected disabled>-- Item --</option>
                                                 <?php foreach ($items as $row) : ?>
@@ -471,7 +486,6 @@ if ($this->session->userdata('level') != 1) {
                                             </select>
                                         </div>
                                         <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
-
                                     </div>
                                 </div>
                                 <input type="hidden" name="eq_id" value="<?= $this->uri->segment(3); ?>">
@@ -485,6 +499,7 @@ if ($this->session->userdata('level') != 1) {
                     </div>
                 </div>
             </div>
+            
            <!-- Modal Import CSV -->
 <div class="modal" tabindex="-1" id="excel_import">
     <div class="modal-dialog">
@@ -519,6 +534,8 @@ if ($this->session->userdata('level') != 1) {
         </div>
     </div>
 </div>
+            
+            <!-- Modal Detail Part -->
             <div class="modal" tabindex="-1" id="part_detail">
                 <div class="modal-dialog modal-dialog-scrollable modal-dialog-fullscreen modal-fullscreen">
                     <div class="modal-content modal-content-fullscreen">
@@ -550,9 +567,8 @@ if ($this->session->userdata('level') != 1) {
         <!-- end footer -->
     </div>
     <!-- end wrapper -->
+    
     <!-- JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="<?= base_url(); ?>assets/js/popper.min.js"></script>
     <script src="<?= base_url(); ?>assets/js/bootstrap.min.js"></script>
     <!--plugins-->
@@ -564,8 +580,8 @@ if ($this->session->userdata('level') != 1) {
     <script src="<?= base_url(); ?>assets/js/app.js?t=<?= time(); ?>"></script>
     <!--Data Tables js-->
     <script src="<?= base_url(); ?>assets/plugins/datatable/js/jquery.dataTables.min.js"></script>
-
     <script src="<?= base_url(); ?>assets/plugins/select2/js/select2.min.js"></script>
+    
     <!-- Script untuk menampilkan nama file yang dipilih -->
     <script>
 $(document).ready(function() {
@@ -581,6 +597,7 @@ $(document).ready(function() {
         var eq_id = '<?= $this->uri->segment(3); ?>';
         var section_id = '<?= $section_id; ?>';
         var machine_id = '<?= $machine_id; ?>';
+        var check_measure_data = '<?= $check_measure_data; ?>';
 
         function deletePart(id) {
             Swal.fire({
@@ -715,45 +732,259 @@ $(document).ready(function() {
             allowClear: Boolean($(this).data('allow-clear')),
         });
 
+        // MODIFIKASI: Function checkLengkap dengan loading indicator untuk auto export
         function checkLengkap() {
-    // Pemeriksaan untuk memilih user
-    var step_proses_user = $('#step_proses_user').val();
-    if (step_proses_user == '-' || step_proses_user == null || step_proses_user == '') {
-        Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Pilih User Terlebih Dahulu!',
-        });
-        return false;
-    }
+            // Pemeriksaan untuk memilih user
+            var step_proses_user = $('#step_proses_user').val();
+            if (step_proses_user == '-' || step_proses_user == null || step_proses_user == '') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Pilih User Terlebih Dahulu!',
+                });
+                return false;
+            }
 
-    // Pemeriksaan untuk data measurement
-    var check_measure_data = '<?= $check_measure_data; ?>';
-    if (check_measure_data == 1) {
+            // Pemeriksaan untuk data measurement
+            if (check_measure_data == 1) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Data Belum Lengkap',
+                    text: 'Masih ada data measurement yang kosong. Apakah Anda yakin ingin mengirim?',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Kirim & Export',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Tampilkan loading saat proses kirim dan export
+                        Swal.fire({
+                            title: 'Mengirim Checksheet...',
+                            text: 'Sedang memproses pengiriman dan export checksheet',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            willOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                        
+                        // Submit form untuk kirim dan otomatis export
+                        $('#form_kirim_checksheet').submit();
+                    }
+                });
+                return false;
+            }
+
+            // Jika data lengkap, langsung kirim dengan loading indicator
+            Swal.fire({
+                title: 'Mengirim Checksheet...',
+                text: 'Sedang memproses pengiriman dan export checksheet',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Submit form untuk kirim dan otomatis export
+            $('#form_kirim_checksheet').submit();
+        }
+
+        window.onload = function() {
+            $(".img_tambahan").imagePreviewer();
+        };
+    </script>
+
+    <!-- Enhanced JavaScript untuk marking management -->
+<script>
+$(document).ready(function() {
+    // Check for new marked rows from previous checksheet copy
+    <?php if ($this->session->flashdata('new_marked_rows')): ?>
+    var newMarkedRows = <?= $this->session->flashdata('new_marked_rows'); ?>;
+    if (newMarkedRows && newMarkedRows.length > 0) {
+        // Update localStorage with new IDs
+        localStorage.setItem('markedRows', JSON.stringify(newMarkedRows));
+        
+        // Show notification
         Swal.fire({
-            icon: 'warning',
-            title: '',
-            text: 'Apakah Anda yakin ingin mengirim data ini?',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Kirim',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Jika pengguna memilih untuk mengirim, maka form akan disubmit
-                $('#form_kirim_checksheet').submit();
+            title: 'Marking Preserved!',
+            text: newMarkedRows.length + ' item yang sudah di-mark berhasil dipindahkan ke pemeriksaan ini.',
+            icon: 'success',
+            confirmButtonText: 'OK'
+        }).then(() => {
+            // Reload table to show markings
+            loadTableDetail(eq_id, section_id, machine_id);
+        });
+    }
+    <?php endif; ?>
+    
+    // Enhanced load table detail function
+    function loadTableDetailWithMarkingCheck(id, section_id, machine_id) {
+        $.ajax({
+            url: '<?= base_url('checksheet/get_table_detail/') ?>' + id + '?section_id=' + section_id + '&machine_id=' + machine_id,
+            type: 'GET',
+            dataType: 'html',
+            success: function(data) {
+                $('.table_detail').html(data);
+                
+                // After loading table, apply markings
+                setTimeout(function() {
+                    loadMarkedRows();
+                }, 100);
             }
         });
-        return false;
     }
+    
+    // Override the existing loadTableDetail function
+    window.loadTableDetail = loadTableDetailWithMarkingCheck;
+    
+    // Initial load of marked rows when page loads
+    setTimeout(function() {
+        loadMarkedRows();
+    }, 500);
+});
 
-    // Pengiriman form tanpa memeriksa form tambahan
-    $('#form_kirim_checksheet').submit();
+// Function to show marking info
+function showMarkingInfo() {
+    var markedRows = JSON.parse(localStorage.getItem('markedRows') || '[]');
+    var content = '';
+    
+    if (markedRows.length === 0) {
+        content = '<div class="alert alert-info">Tidak ada item yang di-mark saat ini.</div>';
+    } else {
+        content = '<div class="alert alert-warning">';
+        content += '<strong>Total item yang di-mark: ' + markedRows.length + '</strong><br>';
+        content += 'ID yang di-mark: ' + markedRows.join(', ');
+        content += '</div>';
+        
+        content += '<div class="alert alert-info">';
+        content += '<strong>Informasi Marking:</strong><br>';
+        content += '• Item yang di-mark akan tetap ter-highlight dengan background kuning<br>';
+        content += '• Marking akan terbawa ketika copy checksheet ke pemeriksaan baru<br>';
+        content += '• Hanya administrator yang dapat mengubah marking<br>';
+        content += '• Marking disimpan di browser dan bersifat lokal';
+        content += '</div>';
+    }
+    
+    $('#markingInfoContent').html(content);
+    $('#markingInfoModal').modal('show');
 }
 
-window.onload = function() {
-    $(".img_tambahan").imagePreviewer();
-};
-    </script>
+// Function to clear all marked rows
+function clearAllMarkedRows() {
+    var markedRows = JSON.parse(localStorage.getItem('markedRows') || '[]');
+    
+    if (markedRows.length === 0) {
+        Swal.fire('Info', 'Tidak ada item yang di-mark saat ini.', 'info');
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Clear All Marks?',
+        text: 'Semua marking (' + markedRows.length + ' item) akan dihapus. Aksi ini tidak dapat dibatalkan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus Semua!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Clear localStorage
+            localStorage.removeItem('markedRows');
+            
+            // Remove visual markings
+            $('.marked-row').removeClass('marked-row');
+            $('.mark-btn.marked').removeClass('marked').addClass('unmarked').text('Mark');
+            
+            Swal.fire('Cleared!', 'Semua marking telah dihapus.', 'success');
+        }
+    });
+}
+
+// Function to clear all marked rows from modal
+function clearAllMarkedRowsFromModal() {
+    $('#markingInfoModal').modal('hide');
+    setTimeout(function() {
+        clearAllMarkedRows();
+    }, 300);
+}
+
+// Enhanced function to show marking status on page load
+function showMarkingStatus() {
+    var markedRows = JSON.parse(localStorage.getItem('markedRows') || '[]');
+    
+    if (markedRows.length > 0) {
+        // Show a small notification about existing markings
+        toastr.info('Terdapat ' + markedRows.length + ' item yang ter-mark', 'Marking Status', {
+            timeOut: 3000,
+            positionClass: 'toast-top-right'
+        });
+    }
+}
+
+// Call on page load
+$(document).ready(function() {
+    setTimeout(showMarkingStatus, 1000);
+});
+
+// Export function for marking data (optional feature)
+function exportMarkingData() {
+    var markedRows = JSON.parse(localStorage.getItem('markedRows') || '[]');
+    
+    if (markedRows.length === 0) {
+        Swal.fire('Info', 'Tidak ada data marking untuk di-export.', 'info');
+        return;
+    }
+    
+    var csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Marked_Row_ID\n";
+    markedRows.forEach(function(rowId) {
+        csvContent += rowId + "\n";
+    });
+    
+    var encodedUri = encodeURI(csvContent);
+    var link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "marked_rows_" + new Date().getTime() + ".csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    Swal.fire('Success', 'Data marking berhasil di-export.', 'success');
+}
+</script>
+
+<!-- Tambahkan CSS untuk enhanced marking features -->
+<style>
+.marking-status-indicator {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    z-index: 1000;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.marking-status-indicator.show {
+    display: block;
+}
+
+.btn-group .btn {
+    margin-left: 5px;
+}
+
+.alert-marking-info {
+    border-left: 4px solid #ffc107;
+    background-color: #fff3cd;
+    color: #856404;
+}
+</style>
 
     <!-- Service Worker Registration -->
     <script>
